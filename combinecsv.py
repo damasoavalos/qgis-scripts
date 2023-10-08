@@ -1,6 +1,6 @@
 import os
 import shutil
-import processing
+from qgis import processing
 import datetime
 
 from qgis.core import (QgsProcessing,

@@ -63,11 +63,11 @@ class ContourSmoother(QgsProcessingAlgorithm):
 
         features_boundary = input_layer_boundaries.getFeatures()
         for i, feature in enumerate(features_boundary):
-            utm_zone = utils.getUtmZoneFromGeometry(feature, feedback)
+            utm_zone = utils.get_utm_zone_from_geometry(feature, feedback)
             input_layer_boundaries.select(feature.id())
             _selected_input_layer_boundaries = processing.run("native:saveselectedfeatures", {'INPUT': input_layer_boundaries, 'OUTPUT': 'memory:'})['OUTPUT']
-            utm_layer_boundary = utils.reprojectToUtm(_selected_input_layer_boundaries, utm_zone, context, feedback)
-            utm_layer_contour = utils.reprojectToUtm(input_layer_contour, utm_zone, context, feedback)
+            utm_layer_boundary = utils.reproject_to_utm(_selected_input_layer_boundaries, utm_zone, context, feedback)
+            utm_layer_contour = utils.reproject_to_utm(input_layer_contour, utm_zone, context, feedback)
 
             buffer_params = {
                 'INPUT': utm_layer_boundary,
@@ -111,7 +111,7 @@ class ContourSmoother(QgsProcessingAlgorithm):
                     simplified_layer_contour = processing.run('native:simplifygeometries', simplify_params)['OUTPUT']
                     layer_contour = simplified_layer_contour.clone()
 
-            wgs84_layer_contour = utils.reprojectToWGS84(layer_contour, context, feedback)
+            wgs84_layer_contour = utils.reproject_to_wgs84(layer_contour, context, feedback)
             sink.addFeatures(wgs84_layer_contour.getFeatures(), QgsFeatureSink.FastInsert)
             input_layer_boundaries.removeSelection()
         return {self.OUTPUT: dest_id}

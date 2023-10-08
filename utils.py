@@ -9,34 +9,34 @@ from qgis.core import (
                       )
 
 
-def delete(var):
-    var_exists = False
+def delete(_var):
+    # var_exists = False
     try:
-        var
+        _var
     except NameError:
         var_exists = False
     else:
         var_exists = True
     if var_exists:
-        del var
+        del _var
 
 
-def angleDiff(angle1, angle2):
-    return 180 - abs(abs(angle1 - angle2) - 180)
+def angle_diff(_angle1, _angle2):
+    return 180 - abs(abs(_angle1 - _angle2) - 180)
 
 
-def reprojectLayer(_in_layer, to_epsg, _context, _feedback):
+def reproject_layer(_in_layer, _to_epsg, _context, _feedback):
     if _feedback.isCanceled():
         return {}
 
     _parameter = {'INPUT': _in_layer,
-                  'TARGET_CRS': to_epsg,
+                  'TARGET_CRS': _to_epsg,
                   'OUTPUT': 'memory:temp'}
     _reprojectedLayer = processing.run('native:reprojectlayer', _parameter, context=_context)['OUTPUT']
     return _reprojectedLayer
 
 
-def calculateDistance(_feature):
+def calculate_distance(_feature):
     calculator = QgsDistanceArea()
     calculator.setEllipsoid('WGS84')
 
@@ -46,10 +46,10 @@ def calculateDistance(_feature):
     return _distance
 
 
-def calculateAzimuth(v1, v2):
+def calculate_azimuth(_v1, _v2):
     _azimuth = None
-    if v1.isEmpty() is False and v2.isEmpty() is False:
-        _azimuth = math.trunc(v1.azimuth(v2))
+    if _v1.isEmpty() is False and _v2.isEmpty() is False:
+        _azimuth = math.trunc(_v1.azimuth(_v2))
         if _azimuth < 0:
             _azimuth += 360
     else:
@@ -57,7 +57,7 @@ def calculateAzimuth(v1, v2):
     return _azimuth
 
 
-def getStartEndPoints(_feature_line):
+def get_start_end_points(_feature_line):
     first_vertex = None
     last_vertex = None
     for part in _feature_line.geometry().constGet():
@@ -66,7 +66,7 @@ def getStartEndPoints(_feature_line):
     return first_vertex, last_vertex
 
 
-def createOutputVector(_in_layer, _geometry_type):
+def create_output_vector(_in_layer, _geometry_type):
     # Get its list of fields
     _in_fields = _in_layer.dataProvider().fields()
 
@@ -84,21 +84,21 @@ def createOutputVector(_in_layer, _geometry_type):
     return _out_layer
 
 
-def isEven(number):
-    even = False
-    if number % 2 == 0:
+def is_even(_number):
+    # even = False
+    if _number % 2 == 0:
         even = True  # Even
     else:
         even = False  # Odd
     return even
 
 
-def getUtmZoneFromGeometry(feature, _feedback):
+def get_utm_zone_from_geometry(_feature, _feedback):
     if _feedback.isCanceled():
         return {}
 
     # Return the UTM Zone of the feature's geometry as a string
-    centroid = feature.geometry().centroid()
+    centroid = _feature.geometry().centroid()
     longitude = centroid.asPoint().x()
     latitude = centroid.asPoint().y()
     zone_number = math.floor(((longitude + 180) / 6) % 60) + 1
@@ -111,7 +111,7 @@ def getUtmZoneFromGeometry(feature, _feedback):
     return '{0}{1}'.format(zone_number, zone_letter)
 
 
-def getUtmZoneFromExtent(_extent, _feedback):
+def get_utm_zone_from_extent(_extent, _feedback):
     if _feedback.isCanceled():
         return {}
     # Return the UTM Zone of the extent as a string
@@ -130,7 +130,7 @@ def getUtmZoneFromExtent(_extent, _feedback):
     return '{0}{1}'.format(zone_number, zone_letter)
 
 
-def reprojectToUtm(_in_layer, _utm_zone, _context, _feedback):
+def reproject_to_utm(_in_layer, _utm_zone, _context, _feedback):
     if _feedback.isCanceled():
         return {}
 
@@ -143,7 +143,7 @@ def reprojectToUtm(_in_layer, _utm_zone, _context, _feedback):
     return _utm_layer
 
 
-def reprojectToWGS84(_in_layer, _context, _feedback):
+def reproject_to_wgs84(_in_layer, _context, _feedback):
     if _feedback.isCanceled():
         return {}
 

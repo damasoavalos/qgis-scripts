@@ -45,7 +45,7 @@ class SmoothBezier(QgsProcessingAlgorithm):
     def createTempLayer(self, _input_layer):
         # Convert its geometry type enum to a string we can pass to utils.createOutputVector function
         in_layer_geometry_type = ['Point', 'Linestring', 'Polygon'][_input_layer.geometryType()]
-        _temp_layer = utils.createOutputVector(_input_layer, in_layer_geometry_type)
+        _temp_layer = utils.create_output_vector(_input_layer, in_layer_geometry_type)
 
         _temp_layer_pr = _temp_layer.dataProvider()
         _temp_layer_pr.addAttributes([QgsField('f_id', QVariant.Int)])
