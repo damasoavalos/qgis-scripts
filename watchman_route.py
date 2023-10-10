@@ -1,19 +1,46 @@
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
-                       QgsProcessingException,
-                       QgsProcessingOutputNumber,
-                       QgsProcessingParameterDistance,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterVectorDestination,
-                       QgsProcessingParameterRasterDestination)
-from qgis import processing
+                       QgsProcessingParameterVectorDestination)
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class WatchmanRoute(QgsProcessingAlgorithm):
     """
     Algorithm to implement a solution to a Watchman Route problem
     """
+
+    def plot_polygon(self, _polygon, color='b'):
+        """Plot a polygon."""
+        x, y = zip(*_polygon)
+        plt.fill(x, y, alpha=0.2, color=color)
+        plt.plot(x + (x[0],), y + (y[0],), color=color)
+
+    def plot_path(self, points, color='r'):
+        """Plot a path between points."""
+        x, y = zip(*points)
+        plt.plot(x, y, color=color)
+
+    def triangulate_convex_polygon(self, _polygon):
+        """Triangulate a convex polygon."""
+        _triangles = []
+        for i in range(1, len(_polygon) - 1):
+            _triangle = [_polygon[0], _polygon[i], _polygon[i + 1]]
+            _triangles.append(_triangle)
+
+        return _triangles
+
+    def find_shortest_path(self, _triangles):
+        """Find the shortest path to traverse all triangles."""
+        _path = []
+        for _triangle in _triangles:
+            centroid = np.mean(_triangle, axis=0).tolist()
+            _path.append(centroid)
+
+        return _path
 
     def initAlgorithm(self, config=None):
         """
@@ -23,126 +50,48 @@ class WatchmanRoute(QgsProcessingAlgorithm):
         # parameter.
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                'INPUT',
-                self.tr('Input vector layer'),
-                types=[QgsProcessing.TypeVectorAnyGeometry]
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterVectorDestination(
-                'BUFFER_OUTPUT',
-                self.tr('Buffer output'),
-            )
-        )
-        # 'OUTPUT' is the recommended name for the main output
-        # parameter.
-        self.addParameter(
-            QgsProcessingParameterRasterDestination(
-                'OUTPUT',
-                self.tr('Raster output')
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterDistance(
-                'BUFFERDIST',
-                self.tr('BUFFERDIST'),
-                defaultValue = 1.0,
-                # Make distance units match the INPUT layer units:
-                parentParameterName='INPUT'
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterDistance(
-                'CELLSIZE',
-                self.tr('CELLSIZE'),
-                defaultValue = 10.0,
-                parentParameterName='INPUT'
-            )
-        )
-        self.addOutput(
-            QgsProcessingOutputNumber(
-                'NUMBEROFFEATURES',
-                self.tr('Number of features processed')
+                'INPUT_POLYGON',
+                self.tr('Input polygon'),
+                types=[QgsProcessing.TypeVectorPolygon],
+                defaultValue=None
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        """
-        Here is where the processing itself takes place.
-        """
-        # First, we get the count of features from the INPUT layer.
-        # This layer is defined as a QgsProcessingParameterFeatureSource
-        # parameter, so it is retrieved by calling
-        # self.parameterAsSource.
-        input_featuresource = self.parameterAsSource(parameters,
-                                                     'INPUT',
-                                                     context)
-        numfeatures = input_featuresource.featureCount()
+        # === Start processAlgorithm =============================================================================================================
+        # === Here is where the processing itself takes place. ========
 
-        # Retrieve the buffer distance and raster cell size numeric
-        # values. Since these are numeric values, they are retrieved
-        # using self.parameterAsDouble.
-        bufferdist = self.parameterAsDouble(parameters, 'BUFFERDIST',
-                                            context)
-        rastercellsize = self.parameterAsDouble(parameters, 'CELLSIZE',
-                                                context)
-        if feedback.isCanceled():
-            return {}
-        buffer_result = processing.run(
-            'native:buffer',
-            {
-                # Here we pass on the original parameter values of INPUT
-                # and BUFFER_OUTPUT to the buffer algorithm.
-                'INPUT': parameters['INPUT'],
-                'OUTPUT': parameters['BUFFER_OUTPUT'],
-                'DISTANCE': bufferdist,
-                'SEGMENTS': 10,
-                'DISSOLVE': True,
-                'END_CAP_STYLE': 0,
-                'JOIN_STYLE': 0,
-                'MITER_LIMIT': 10
-            },
-            # Because the buffer algorithm is being run as a step in
-            # another larger algorithm, the is_child_algorithm option
-            # should be set to True
-            is_child_algorithm=True,
+        import pydevd_pycharm
+        pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
+        input_polygon = self.parameterAsVectorLayer(parameters, 'INPUT_POLYGON', context)
+
+        features = input_polygon.getFeatures()
+        for feature in features:
+            geom = feature.geometry()
+            # Iterate through all vertices of the polygon
+            polygon = []
+            for vertex in geom.vertices():
+                polygon.append((vertex.x(), vertex.y()))
+
+            # triangles = self.triangulate_convex_polygon(polygon)
             #
-            # It's important to pass on the context and feedback objects to
-            # child algorithms, so that they can properly give feedback to
-            # users and handle cancelation requests.
-            context=context,
-            feedback=feedback)
+            # # Find the shortest path to traverse all triangles
+            # path = self.find_shortest_path(triangles)
+            #
+            # # Plot the polygon
+            # self.plot_polygon(polygon)
+            #
+            # # Plot the triangles
+            # for triangle in triangles:
+            #     self.plot_polygon(triangle, color='g')
+            #
+            # # Plot the path
+            # self.plot_path([polygon[0]] + path + [polygon[0]], color='r')
+            # plt.axis('equal')
+            #
+            # plt.show()
 
-        # Check for cancelation
-        if feedback.isCanceled():
-            return {}
-
-        # Run the separate rasterization algorithm using the buffer result
-        # as an input.
-        rasterized_result = processing.run(
-            'qgis:rasterize',
-            {
-                # Here we pass the 'OUTPUT' value from the buffer's result
-                # dictionary off to the rasterize child algorithm.
-                'LAYER': buffer_result['OUTPUT'],
-                'EXTENT': buffer_result['OUTPUT'],
-                'MAP_UNITS_PER_PIXEL': rastercellsize,
-                # Use the original parameter value.
-                'OUTPUT': parameters['OUTPUT']
-            },
-            is_child_algorithm=True,
-            context=context,
-            feedback=feedback)
-
-        if feedback.isCanceled():
-            return {}
-
-        # Return the results
-        return {'OUTPUT': rasterized_result['OUTPUT'],
-                'BUFFER_OUTPUT': buffer_result['OUTPUT'],
-                'NUMBEROFFEATURES': numfeatures}
-
-    # === End processAlgorithm =============================================================================================================
+        # === End processAlgorithm =============================================================================================================
 
     def tr(self, string):
         """
@@ -158,29 +107,29 @@ class WatchmanRoute(QgsProcessingAlgorithm):
         """
         Returns the unique algorithm name.
         """
-        return 'bufferrasterextend'
+        return 'watchmanroute'
 
     def displayName(self):
         """
         Returns the translated algorithm name.
         """
-        return self.tr('Buffer and export to raster (extend)')
+        return self.tr('Watchman Route')
 
     def group(self):
         """
         Returns the name of the group this algorithm belongs to.
         """
-        return self.tr('Example scripts')
+        return self.tr('Ideas')
 
     def groupId(self):
         """
         Returns the unique ID of the group this algorithm belongs
         to.
         """
-        return 'examplescripts'
+        return 'ideasscripts'
 
     def shortHelpString(self):
         """
         Returns a localised short help string for the algorithm.
         """
-        return self.tr('Example algorithm short description')
+        return self.tr('Implement a solution to a Watchman Route problem')
