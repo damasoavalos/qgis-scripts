@@ -111,8 +111,8 @@ if __name__ == "__main__":
 
     polygon = read_from_json_file('data.json')
 
-    new_polygon = polygon
-    save_to_json_file(new_polygon, 'new-polygon_0')
+    # new_polygon = polygon
+    # save_to_json_file(new_polygon, 'new-polygon_0')
 
     # new_polygon = shift_polygon_coordinates(new_polygon)
     # save_to_json_file(new_polygon, 'new-polygon_1')
