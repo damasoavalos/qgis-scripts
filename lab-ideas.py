@@ -1,65 +1,56 @@
-import numpy as np
-from scipy.special import comb
-from matplotlib import pyplot as plt
-import bezier
-
-import sys
-sys.path.append(r'D:\Repositories\python-scripts\qgis-scripts')
-from vertices import vertices
-
-
-def bernstein_poly(i, n, t):
+def shift_polygon_coordinates(coordinates):
     """
-     The Bernstein polynomial of n, i as a function of t
+    Shift the coordinates of a polygon by replacing the first pair with the second and closing the polygon.
+
+    Parameters:
+        coordinates (list): List of tuples representing the coordinates (x, y) of the polygon.
+
+    Returns:
+        list: New list of shifted coordinates.
     """
 
-    return comb(n, i) * (t**(n-i)) * (1 - t)**i
+    if len(coordinates) < 3:
+        return "A valid polygon must have at least 3 coordinates."
+
+    # Remove the first coordinate
+    shifted_coordinates = coordinates[1:]
+
+    # Add the second coordinate to the end to close the polygon
+    shifted_coordinates.append(coordinates[1])
+
+    return shifted_coordinates
 
 
-def bezier_curve(_points, _nTimes=1000):
+def shift_polygon_coordinates_reverse(coordinates):
     """
-       Given a set of control _points, return the
-       Bézier curve defined by the control _points.
+    Shift and close the coordinates of a polygon by moving the last coordinate to the beginning and adding the penultimate coordinate to the beginning.
 
-       _points should be a list of lists, or list of tuples
-       such as [ [1,1],
-                 [2,3],
-                 [4,5], ..[Xn, Yn] ]
-        _nTimes is the number of time steps, defaults to 1000
+    Parameters:
+        coordinates (list): List of tuples representing the coordinates (x, y) of the polygon.
 
-        See http://processingjs.nihongoresources.com/bezierinfo/
+    Returns:
+        list: New list of shifted and closed coordinates.
     """
 
-    _nPoints = len(_points)
-    _xPoints = np.array([p[0] for p in _points])
-    _yPoints = np.array([p[1] for p in _points])
+    if len(coordinates) < 3:
+        return "A valid polygon must have at least 3 coordinates."
 
-    bp = []
-    polynomial_array = []
-    t = np.linspace(0.0, 1.0, _nTimes)
-    for i in range(0, _nPoints):
-        bp.append(bernstein_poly(i, _nPoints - 1, t))
-    polynomial_array = np.array(bp)
-    # polynomial_array = np.array([bernstein_poly(i, _nPoints-1, t) for i in range(0, _nPoints)])
+    # Move the last coordinate to the beginning
+    shifted_coordinates = coordinates[:-1]
 
-    _xvals = np.dot(_xPoints, polynomial_array)
-    _yvals = np.dot(_yPoints, polynomial_array)
+    # Add the penultimate coordinate (which is now the second in the shifted list) to the beginning to close the polygon
+    shifted_coordinates.insert(0, coordinates[-2])
 
-    return _xvals, _yvals
+    return shifted_coordinates
 
 
+# Example usage
 if __name__ == "__main__":
+    original_coordinates = [(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]
+    new_coordinates = shift_polygon_coordinates(original_coordinates)
+    new_coordinates_reverse = shift_polygon_coordinates_reverse(original_coordinates)
 
-    nPoints = 4
-    points = np.random.rand(nPoints, 2)*200
-    # points = np.asfortranarray(vertices)
-    xpoints = [p[0] for p in points]
-    ypoints = [p[1] for p in points]
+    print("Original coordinates:", original_coordinates)
+    print("Shifted coordinates:", new_coordinates)
+    print("Shifted coordinates reverse:", new_coordinates_reverse)
 
-    xvals, yvals = bezier_curve(points, _nTimes=1000)
-    plt.plot(xvals, yvals)
-    plt.plot(xpoints, ypoints, "ro")
-    for nr in range(len(points)):
-        plt.text(points[nr][0], points[nr][1], nr)
-
-    plt.show()

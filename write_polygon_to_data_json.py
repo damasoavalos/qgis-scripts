@@ -3,47 +3,16 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterVectorDestination)
+                       QgsProcessingParameterFileDestination)
 
-import matplotlib.pyplot as plt
-import numpy as np
 import json
 import os
 
 
-class WatchmanRoute(QgsProcessingAlgorithm):
+class WritePolygonToDataJson(QgsProcessingAlgorithm):
     """
     Algorithm to implement a solution to a Watchman Route problem
     """
-
-    def plot_polygon(self, _polygon, color='b'):
-        """Plot a polygon."""
-        x, y = zip(*_polygon)
-        plt.fill(x, y, alpha=0.2, color=color)
-        plt.plot(x + (x[0],), y + (y[0],), color=color)
-
-    def plot_path(self, points, color='r'):
-        """Plot a path between points."""
-        x, y = zip(*points)
-        plt.plot(x, y, color=color)
-
-    def triangulate_convex_polygon(self, _polygon):
-        """Triangulate a convex polygon."""
-        _triangles = []
-        for i in range(1, len(_polygon) - 1):
-            _triangle = [_polygon[0], _polygon[i], _polygon[i + 1]]
-            _triangles.append(_triangle)
-
-        return _triangles
-
-    def find_shortest_path(self, _triangles):
-        """Find the shortest path to traverse all triangles."""
-        _path = []
-        for _triangle in _triangles:
-            centroid = np.mean(_triangle, axis=0).tolist()
-            _path.append(centroid)
-
-        return _path
 
     def initAlgorithm(self, config=None):
         """
@@ -56,11 +25,23 @@ class WatchmanRoute(QgsProcessingAlgorithm):
                 'INPUT_POLYGON',
                 self.tr('Input polygon'),
                 types=[QgsProcessing.TypeVectorPolygon],
-                defaultValue=None
+                defaultValue='polygon'
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFileDestination(
+                'OUTPUT_JSON_FILE',
+                self.tr('Output JSON file'),
+                'JSON files (*.json)',
+                defaultValue='/home/damaso/repos/qgis-scripts/data-json/data_999.json',
+                optional=False,
+                createByDefault=True
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
+
         # === Start processAlgorithm =============================================================================================================
         # === Here is where the processing itself takes place. ========
 
@@ -68,6 +49,7 @@ class WatchmanRoute(QgsProcessingAlgorithm):
         # pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
 
         input_polygon = self.parameterAsVectorLayer(parameters, 'INPUT_POLYGON', context)
+        output_json_file = self.parameterAsFileOutput(parameters, 'OUTPUT_JSON_FILE', context)
 
         features = input_polygon.getFeatures()
         for feature in features:
@@ -77,30 +59,10 @@ class WatchmanRoute(QgsProcessingAlgorithm):
             for vertex in geom.vertices():
                 polygon.append((vertex.x(), vertex.y()))
 
-            # Specify the relative path to the JSON file
-            file_path = os.path.join("..", "data", "data.json")
             # Open the file for writing
-            with open(file_path, "w") as file:
+            with open(output_json_file, "w") as file:
                 # Write the data to the file
                 json.dump(polygon, file, indent=4)  # The indent parameter is optional, and makes the file more readable
-
-            # triangles = self.triangulate_convex_polygon(polygon)
-            #
-            # # Find the shortest path to traverse all triangles
-            # path = self.find_shortest_path(triangles)
-            #
-            # # Plot the polygon
-            # self.plot_polygon(polygon)
-            #
-            # # Plot the triangles
-            # for triangle in triangles:
-            #     self.plot_polygon(triangle, color='g')
-            #
-            # # Plot the path
-            # self.plot_path([polygon[0]] + path + [polygon[0]], color='r')
-            # plt.axis('equal')
-            #
-            # plt.show()
 
             return {}
 
@@ -114,19 +76,19 @@ class WatchmanRoute(QgsProcessingAlgorithm):
 
     def createInstance(self):
         # Must return a new copy of your algorithm.
-        return WatchmanRoute()
+        return WritePolygonToDataJson()
 
     def name(self):
         """
         Returns the unique algorithm name.
         """
-        return 'watchmanroute'
+        return 'WritePolygonToDataJson'
 
     def displayName(self):
         """
         Returns the translated algorithm name.
         """
-        return self.tr('Watchman Route')
+        return self.tr('Write Polygon to data.json')
 
     def group(self):
         """
@@ -145,4 +107,4 @@ class WatchmanRoute(QgsProcessingAlgorithm):
         """
         Returns a localised short help string for the algorithm.
         """
-        return self.tr('Implement a solution to a Watchman Route problem')
+        return self.tr('Write a polygon as WKT to a data.json file')
