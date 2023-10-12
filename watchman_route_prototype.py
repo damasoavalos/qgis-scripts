@@ -146,14 +146,14 @@ if __name__ == "__main__":
     new_polygon_reverse = polygon
     save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_0')
 
-    # new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
-    # save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_1')
+    new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
+    save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_1')
 
-    # new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
-    # save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_2')
+    new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
+    save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_2')
 
-    # new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
-    # save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_3')
+    new_polygon_reverse = shift_polygon_coordinates_reverse(new_polygon_reverse)
+    save_to_json_file(new_polygon_reverse, 'new-polygon_reverse_3')
 
     # Triangulate the polygon
     triangles = triangulate_convex_polygon(new_polygon_reverse)

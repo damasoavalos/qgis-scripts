@@ -6,7 +6,6 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFileDestination)
 
 import json
-import os
 
 
 class WritePolygonToDataJson(QgsProcessingAlgorithm):
