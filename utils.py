@@ -1,4 +1,3 @@
-import math
 from pyproj import CRS
 
 from qgis import processing
@@ -7,6 +6,10 @@ from qgis.core import (
                        QgsVectorLayer,
                        QgsCoordinateReferenceSystem
                       )
+
+import math
+import os
+import json
 
 
 def delete(_var):
@@ -134,7 +137,7 @@ def reproject_to_utm(_in_layer, _utm_zone, _context, _feedback):
     if _feedback.isCanceled():
         return {}
 
-    # we are going to hardcode "'WGS 84 / UTM zone" this part of the srs, for now.
+    # we are going to hardcode "WGS 84 / UTM zone" this part of the srs, for now.
     _stringUtmCrs = CRS.from_user_input('WGS 84 / UTM zone {}'.format(_utm_zone)).to_string()
     _parameter = {'INPUT': _in_layer,
                   'TARGET_CRS': _stringUtmCrs,
@@ -152,3 +155,73 @@ def reproject_to_wgs84(_in_layer, _context, _feedback):
                   'OUTPUT': 'memory:temp'}
     _wgs84_layer = processing.run('native:reprojectlayer', _parameter, context=_context, feedback=_feedback)['OUTPUT']
     return _wgs84_layer
+
+# ===== Ideas-to-make-money =================================================================================================
+
+
+def shift_polygon_coordinates(_coordinates):
+    """
+    Shift the coordinates of a polygon by replacing the first pair with the second and closing the polygon.
+    Parameters:
+        _coordinates (list): List of tuples representing the coordinates (x, y) of the polygon.
+    Returns:
+        list: New list of shifted coordinates.
+    """
+
+    if len(_coordinates) < 3:
+        return "A valid polygon must have at least 3 coordinates."
+
+    # Remove the first coordinate
+    shifted_coordinates = _coordinates[1:]
+
+    # Add the second coordinate to the end to close the polygon
+    shifted_coordinates.append(_coordinates[1])
+
+    return shifted_coordinates
+
+
+def shift_polygon_coordinates_reverse(_coordinates):
+    """
+    Shift and close the coordinates of a polygon by moving the last coordinate to the beginning and adding the penultimate coordinate to the beginning.
+
+    Parameters:
+        _coordinates (list): List of tuples representing the coordinates (x, y) of the polygon.
+
+    Returns:
+        list: New list of shifted and closed coordinates.
+    """
+
+    if len(_coordinates) < 3:
+        return "A valid polygon must have at least 3 coordinates."
+
+    # Move the last coordinate to the beginning
+    shifted_coordinates_reverse = _coordinates[:-1]
+
+    # Add the penultimate coordinate (which is now the second in the shifted list) to the beginning to close the polygon
+    shifted_coordinates_reverse.insert(0, _coordinates[-2])
+
+    return shifted_coordinates_reverse
+
+
+def save_to_json_file(_data, _file_name):
+
+    # Specify the relative path to the JSON file
+    # _file_path = os.path.join('repos', 'qgis-scripts', 'data-json', '{}.json'.format(_file_name))
+    _file_path = os.path.join(os.getcwd(), 'data-json', '{}.json'.format(_file_name))
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(_file_path), exist_ok=True)
+    # Open the file for writing
+    with open(_file_path, "w") as _file:
+        # Write the data to the file
+        json.dump(_data, _file, indent=4)  # The indent parameter is optional, and makes the file more readable
+
+
+def read_from_json_file(_file_name):
+    # Specify the relative path to the JSON file
+    _file_path = os.path.join(os.getcwd(), 'data-json', _file_name)
+
+    # Open the file for reading
+    with open(_file_path, "r") as _file:
+        # Load the data from the file
+        return json.load(_file)
