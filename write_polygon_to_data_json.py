@@ -1,4 +1,3 @@
-
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
@@ -33,7 +32,7 @@ class WritePolygonToDataJson(QgsProcessingAlgorithm):
                 'OUTPUT_JSON_FILE',
                 self.tr('Output JSON file'),
                 'JSON files (*.json)',
-                defaultValue='/home/damaso/repos/qgis-scripts/data-json/data_999.json',
+                defaultValue='/home/damaso/repos/qgis-scripts/data-json/data.json',
                 optional=False,
                 createByDefault=True
             )
