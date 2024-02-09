@@ -2,7 +2,7 @@
 
 """
 ***************************************************************************
-    FieldsMapper.py
+    fields_mapper.py
     ---------------------
     Date                 : October 2014
     Copyright            : (C) 2014 by Arnaud Morvan
