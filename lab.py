@@ -16,7 +16,7 @@ def bernstein_poly(i, n, t):
     return comb(n, i) * (t**(n-i)) * (1 - t)**i
 
 
-def bezier_curve(_points, _nTimes=1000):
+def bezier_curve(_points, _n_times=1000):
     """
        Given a set of control _points, return the
        Bézier curve defined by the control _points.
@@ -36,7 +36,7 @@ def bezier_curve(_points, _nTimes=1000):
 
     bp = []
     polynomial_array = []
-    t = np.linspace(0.0, 1.0, _nTimes)
+    t = np.linspace(0.0, 1.0, _n_times)
     for i in range(0, _nPoints):
         bp.append(bernstein_poly(i, _nPoints - 1, t))
     polynomial_array = np.array(bp)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     xpoints = [p[0] for p in points]
     ypoints = [p[1] for p in points]
 
-    xvals, yvals = bezier_curve(points, _nTimes=1000)
+    xvals, yvals = bezier_curve(points, _n_times=1000)
     plt.plot(xvals, yvals)
     plt.plot(xpoints, ypoints, "ro")
     for nr in range(len(points)):

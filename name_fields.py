@@ -31,26 +31,26 @@ from qgis.PyQt.QtCore import QCoreApplication, QVariant
 import processing
 
 
-class namefields(QgsProcessingAlgorithm):
+class Namefields(QgsProcessingAlgorithm):
     INPUT = 'INPUT'    
-    #HEADINGFIELD = 'HEADINGFIELD' 
-    #DISTANCEFIELD = 'DISTANCEFIELD'  
-    #SORTBYFIELD = 'SORTBYFIELD' 
+    # HEADINGFIELD = 'HEADINGFIELD'
+    # DISTANCEFIELD = 'DISTANCEFIELD'
+    # SORTBYFIELD = 'SORTBYFIELD'
     GROUPBYFIELD = 'GROUPBYFIELD'  
-    #ANGLE = 'ANGLE'   
+    # ANGLE = 'ANGLE'
     OUTPUT = 'OUTPUT'
 
     def __init__(self):
         super().__init__()
         self.outLayer = None        
 
-    ## use the vincenty formula to get accurate distance measurements
-    #def sphereDistance(self, from_point, to_point):
+    # # use the vincenty formula to get accurate distance measurements
+    # def sphereDistance(self, from_point, to_point):
     #    distance.VincentyDistance.ELLIPSOID = 'WGS-84'
     #    return distance.distance(from_point, to_point).meters
 
-    #def angleDiff(self, angle1, angle2):
-    #    return 180 - abs(abs(angle1 - angle2) - 180)
+    # def angle_diff(self, angle1, angle2):
+    #     return 180 - abs(abs(angle1 - angle2) - 180)
     
     #def ReprojectLayer(self, _in_layer, to_epsg, _context, _feedback):
     #    if _feedback.isCanceled():
@@ -188,5 +188,5 @@ class namefields(QgsProcessingAlgorithm):
         return 'firstpasstools'
 
     def createInstance(self):
-        return namefields()
+        return Namefields()
 
