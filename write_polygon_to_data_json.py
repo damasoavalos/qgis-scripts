@@ -2,7 +2,6 @@
 Script Name: write_polygon_to_data_json.py
 Description: This script saved in a json file a wkt version of a polygon.
 """
-
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
@@ -48,8 +47,8 @@ class WritePolygonToDataJson(QgsProcessingAlgorithm):
         # === Start processAlgorithm =============================================================================================================
         # === Here is where the processing itself takes place. ========
 
-        # import pydevd_pycharm
-        # pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
+        import pydevd_pycharm
+        pydevd_pycharm.settrace('127.0.0.1', port=53100, stdoutToServer=True, stderrToServer=True)
 
         input_polygon = self.parameterAsVectorLayer(parameters, 'INPUT_POLYGON', context)
         output_json_file = self.parameterAsFileOutput(parameters, 'OUTPUT_JSON_FILE', context)

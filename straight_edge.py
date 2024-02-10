@@ -41,17 +41,6 @@ class StraightEdge(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterField(self.UNIQUE_VALUE_COLUMN, self.tr('Column with unique values'), 'id', self.INPUT, QgsProcessingParameterField.Any, optional=False))
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Straight edges'), type=QgsProcessing.TypeVectorLine))
 
-    def delete(self, var):
-        var_exists = False
-        try:
-            var
-        except NameError:
-            var_exists = False
-        else:
-            var_exists = True
-        if var_exists:
-            del var
-
     def angleDiff(self, angle1, angle2):
         return 180 - abs(abs(angle1 - angle2) - 180)
 
@@ -71,7 +60,6 @@ class StraightEdge(QgsProcessingAlgorithm):
 
         geom = _feature.geometry()
         _distance = calculator.measureLength(geom)
-        self.delete(calculator)
         return _distance
 
     def calculateAzimuth(self, v1, v2):

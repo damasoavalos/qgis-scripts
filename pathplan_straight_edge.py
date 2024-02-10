@@ -130,17 +130,6 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         _sink_straight_layer.renderer().symbol().setWidth(2)
         _sink_straight_layer.triggerRepaint()
 
-    def delete(self, var):
-        var_exists = False
-        try:
-            var
-        except NameError:
-            var_exists = False
-        else:
-            var_exists = True
-        if var_exists:
-            del var
-
     def angleDiff(self, angle1, angle2):
         return 180 - abs(abs(angle1 - angle2) - 180)
 
@@ -160,7 +149,6 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
 
         geom = _feature.geometry()
         _distance = calculator.measureLength(geom)
-        self.delete(calculator)
         return _distance
 
     def calculateAzimuth(self, v1, v2):

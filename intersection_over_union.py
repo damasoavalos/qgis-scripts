@@ -30,7 +30,8 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
     def __init__(self):
         super().__init__()
 
-    def tr(self, string):
+    @staticmethod
+    def tr(string):
         # Returns a translatable string with the self.tr() function.
         return QCoreApplication.translate('Processing', string)
 
@@ -39,7 +40,8 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT_OVERLAY, 'Overlay layer (Imagery)', types=[QgsProcessing.TypeVectorPolygon], defaultValue=None))
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT_HTML_FILE, 'Output HTML file', 'HTML files (*.html)', defaultValue=None, optional=False, createByDefault=True))
 
-    def createHTML(self, _output_html_file, _output_file_data, _input_vector_name, _input_overlay_name):
+    @staticmethod
+    def create_html(_output_html_file, _output_file_data, _input_vector_name, _input_overlay_name):
         str_html = ''
         str_featureid = ''
         str_iou = ''
@@ -95,6 +97,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
                                   '</html>'
             f.write(str_html)
 
+    # TODO delete this function and any reference to it, we don't need it, bad implementing
     def delete(self, var):
         var_exists = False
         try:
@@ -106,7 +109,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         if var_exists:
             del var
 
-    def createVisualOutput(self, _input_vector, _input_overlay, _output_vector_layer, context):
+    def create_visual_output(self, _input_vector, _input_overlay, _output_vector_layer, context):
         # label
         layer_settings = QgsPalLayerSettings()
         text_format = QgsTextFormat()
@@ -133,7 +136,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         QgsProject.instance().layerTreeRoot().findLayer(_input_vector.id()).setItemVisibilityChecked(False)
         QgsProject.instance().layerTreeRoot().findLayer(_input_overlay.id()).setItemVisibilityChecked(False)
 
-    def calculateGeometryAttributes(self, _layer):
+    def calculate_geometry_attributes(self, _layer):
         calculator = QgsDistanceArea()
         calculator.setEllipsoid('WGS84')
 
@@ -150,10 +153,9 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
 
         geometry_attributes['area_formatted'] = calculator.formatArea(geometry_attributes['area'], 1, QgsUnitTypes.AreaUnit.AreaSquareMeters)
         geometry_attributes['perimeter_formatted'] = calculator.formatDistance(geometry_attributes['perimeter'], 1, QgsUnitTypes.DistanceUnit.DistanceMeters)
-        self.delete(calculator)
         return geometry_attributes
 
-    def calculateIOU(self, _input_vector, _input_overlay, _output_vector_layer, _output_iou_layer, _id, context, feedback):
+    def calculate_iou(self, _input_vector, _input_overlay, _output_vector_layer, _output_iou_layer, _id, context, feedback):
         output_record = []
         record_data = {}
 
@@ -177,7 +179,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
                                                  # feedback=feedback,
                                                  context=context)['OUTPUT']
             ga_intersection_result = intersection_result.clone()
-            intersection_geometry_attribute = self.calculateGeometryAttributes(ga_intersection_result)
+            intersection_geometry_attribute = self.calculate_geometry_attributes(ga_intersection_result)
 
             union_result = processing.run("native:union",
                                           input_params,
@@ -190,17 +192,17 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
                                              # feedback=feedback,
                                              context=context)['OUTPUT']
             ga_dissolve_result = dissolve_result.clone()
-            union_geometry_attribute = self.calculateGeometryAttributes(ga_dissolve_result)
+            union_geometry_attribute = self.calculate_geometry_attributes(ga_dissolve_result)
 
             difference_result = processing.run("native:symmetricaldifference",
                                                input_params,
                                                # feedback=feedback,
                                                context=context)['OUTPUT']
             ga_difference_result = difference_result.clone()
-            difference_geometry_attribute = self.calculateGeometryAttributes(ga_difference_result)
+            difference_geometry_attribute = self.calculate_geometry_attributes(ga_difference_result)
 
-            input_vector_geometry_attribute = self.calculateGeometryAttributes(_input_vector.clone())
-            input_overlay_geometry_attribute = self.calculateGeometryAttributes(_selected_input_overlay.clone())
+            input_vector_geometry_attribute = self.calculate_geometry_attributes(_input_vector.clone())
+            input_overlay_geometry_attribute = self.calculate_geometry_attributes(_selected_input_overlay.clone())
 
             iou_formatted = round((intersection_geometry_attribute['area'] / union_geometry_attribute['area']), 2)
 
@@ -230,18 +232,17 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
                            'Record Id': _id
                            }
 
-            self.addFeatureOutputOverlay(_output_iou_layer, _feature, record_data)
+            self.add_feature_output_overlay(_output_iou_layer, _feature, record_data)
 
             output_record.append(record_data)
-            self.delete(_selected_input_overlay)
             _input_overlay.removeSelection()
 
         for _input_vector_feature in _input_vector.getFeatures():
-            self.addFeatureOutputVector(_output_vector_layer, _input_vector_feature, record_data)
+            self.add_feature_output_vector(_output_vector_layer, _input_vector_feature, record_data)
 
         return output_record
 
-    def createOutputVector(self):
+    def create_output_vector(self):
         # create layer
         _vl = QgsVectorLayer('Polygon', 'output_vector', 'memory')
         _pr = _vl.dataProvider()
@@ -252,7 +253,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         _vl.updateFields()  # tell the vector layer to fetch changes from the provider
         return _vl
 
-    def createOutputOverlay(self):
+    def create_output_overlay(self):
         # create layer
         _vl = QgsVectorLayer('Polygon', 'output_overlay', 'memory')
         _pr = _vl.dataProvider()
@@ -267,7 +268,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         _vl.updateFields()  # tell the vector layer to fetch changes from the provider
         return _vl
 
-    def addFeatureOutputVector(self, _layer, _feature, _record_data):
+    def add_feature_output_vector(self, _layer, _feature, _record_data):
         _pr = _layer.dataProvider()
         # add a feature
         _feat = QgsFeature(_layer.fields())
@@ -280,7 +281,7 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         # because change of extent in provider is not propagated to the layer
         _layer.updateExtents()
 
-    def addFeatureOutputOverlay(self, _layer, _feature, _record_data):
+    def add_feature_output_overlay(self, _layer, _feature, _record_data):
         _pr = _layer.dataProvider()
         # add a feature
         _feat = QgsFeature(_layer.fields())
@@ -305,8 +306,8 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         result = {}
         output_records = []
 
-        output_vector_layer = self.createOutputVector()
-        output_iou_layer = self.createOutputOverlay()
+        output_vector_layer = self.create_output_vector()
+        output_iou_layer = self.create_output_overlay()
 
         input_vector.removeSelection()
         input_overlay.removeSelection()
@@ -344,11 +345,9 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
 
             if input_overlay.selectedFeatureCount() != 0:
                 selected_input_overlay = processing.run("native:saveselectedfeatures", {'INPUT': input_overlay, 'OUTPUT': 'memory:'})['OUTPUT']
-                output_record = self.calculateIOU(selected_input_vector, selected_input_overlay, output_vector_layer, output_iou_layer, feature.id(), context, feedback)
+                output_record = self.calculate_iou(selected_input_vector, selected_input_overlay, output_vector_layer, output_iou_layer, feature.id(), context, feedback)
                 output_records.extend(output_record)
-                self.delete(selected_input_overlay)
 
-            self.delete(selected_input_vector)
             feedback.setProgress(feature.id() * counter)
 
         # output
@@ -357,11 +356,11 @@ class IntersectionOverUnion(QgsProcessingAlgorithm):
         if output_html_file:
             # input_vector
             # input_overlay
-            self.createHTML(output_html_file, output_records_sorted, input_vector.name(), input_overlay.name())
+            self.create_html(output_html_file, output_records_sorted, input_vector.name(), input_overlay.name())
         result[self.OUTPUT_HTML_FILE] = output_html_file
         QgsProject.instance().addMapLayer(output_iou_layer)
         QgsProject.instance().addMapLayer(output_vector_layer)
-        self.createVisualOutput(input_vector, input_overlay, output_vector_layer, context)
+        self.create_visual_output(input_vector, input_overlay, output_vector_layer, context)
 
         feedback.pushInfo('Done')
         return result
