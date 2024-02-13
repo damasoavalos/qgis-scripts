@@ -1,5 +1,5 @@
 import math
-#import utm
+# import utm
 
 from pyproj import CRS
 from unitconvert import lengthunits
@@ -21,7 +21,8 @@ from qgis.core import (QgsProcessing,
 
 import processing
 
-class pointstorectangles(QgsProcessingAlgorithm):
+
+class PointsToRectangles(QgsProcessingAlgorithm):
     INPUT = 'INPUT'    
     HEADINGFIELD = 'HEADINGFIELD' 
     DISTANCEFIELD = 'DISTANCEFIELD'  
@@ -41,9 +42,9 @@ class pointstorectangles(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterExtent(self.EXTENT, 'Input extent to calculate UTM zone', optional=True))  
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, 'As-applied rectangles', type=QgsProcessing.TypeVectorPolygon))
 
-    def FindUtmZone(self, _rect, _feedback):
+    def find_utm_zone(self, _rect, _feedback):
         if _feedback.isCanceled():
-               return {}  
+            return {}
 
         minx = _rect.xMinimum()
         miny = _rect.yMinimum()
@@ -52,7 +53,7 @@ class pointstorectangles(QgsProcessingAlgorithm):
         longitude = minx + width / 2.0
         latitude = miny + height / 2.0
         zone_number = math.floor(((longitude + 180) / 6) % 60) + 1
-        #_utm = utm.from_latlon(latitude, longitude, True)
+        # _utm = utm.from_latlon(latitude, longitude, True)
 
         if latitude >= 0:
             zone_letter = 'N'
@@ -60,22 +61,22 @@ class pointstorectangles(QgsProcessingAlgorithm):
             zone_letter = 'S'
         return '{0}{1}'.format(zone_number, zone_letter)         
         
-    def ReprojectToUtm(self, _inLayer, _utmZone, _context, _feedback):
+    def reproject_to_utm(self, _in_layer, _utm_zone, _context, _feedback):
         if _feedback.isCanceled():
-               return {} 
+            return {}
 
         # we are going to hardcode "'WGS 84 / UTM zone" this part of the srs, for now.
-        _stringUtmCrs = CRS.from_user_input('WGS 84 / UTM zone {}'.format(_utmZone)).to_string()
-        _parameter = {'INPUT': _inLayer, 'TARGET_CRS': _stringUtmCrs, 'OUTPUT': 'memory:temp'}
+        _stringUtmCrs = CRS.from_user_input('WGS 84 / UTM zone {}'.format(_utm_zone)).to_string()
+        _parameter = {'INPUT': _in_layer, 'TARGET_CRS': _stringUtmCrs, 'OUTPUT': 'memory:temp'}
         _utmLayer = processing.run('native:reprojectlayer', _parameter, context=_context, feedback=_feedback)['OUTPUT'] 
         return _utmLayer
     
-    def ReprojectToWgs84(self, _inLayer, _context, _feedback):
+    def reproject_to_wgs84(self, _in_layer, _context, _feedback):
         if _feedback.isCanceled():
-               return {} 
+            return {}
                   
         _stringWgs84Crs = CRS.from_user_input('WGS 84').to_string()
-        _parameter = {'INPUT': _inLayer, 'TARGET_CRS': _stringWgs84Crs, 'OUTPUT': 'memory:temp'}
+        _parameter = {'INPUT': _in_layer, 'TARGET_CRS': _stringWgs84Crs, 'OUTPUT': 'memory:temp'}
         _wgs84Layer = processing.run('native:reprojectlayer', _parameter, context=_context, feedback=_feedback)['OUTPUT'] 
         return _wgs84Layer
 
@@ -107,34 +108,34 @@ class pointstorectangles(QgsProcessingAlgorithm):
         
     def processAlgorithm(self, parameters, context, feedback):
                
-        inputLayer = self.parameterAsVectorLayer(parameters, self.INPUT, context)        
-        headingAttribute = self.parameterAsString(parameters, self.HEADINGFIELD, context)
-        distanceAttribute = self.parameterAsString(parameters, self.DISTANCEFIELD, context)
-        widthAttribute = self.parameterAsString(parameters, self.WIDTHFIELD, context) 
+        input_layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
+        heading_attribute = self.parameterAsString(parameters, self.HEADINGFIELD, context)
+        distance_attribute = self.parameterAsString(parameters, self.DISTANCEFIELD, context)
+        width_attribute = self.parameterAsString(parameters, self.WIDTHFIELD, context)
         rect = self.parameterAsExtent(parameters, self.EXTENT, context) 
         
-        parameters['OUTPUT'].destinationName = '{}-rectangles'.format(inputLayer.sourceName())
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, inputLayer.fields(), QgsWkbTypes.Polygon, inputLayer.crs()) 
+        parameters['OUTPUT'].destinationName = '{}-rectangles'.format(input_layer.sourceName())
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, input_layer.fields(), QgsWkbTypes.Polygon, input_layer.crs())
 
-         # -Find UTM zone- 
+        # -Find UTM zone-
         if rect.isNull():
-            utmZone = self.FindUtmZone(inputLayer.extent(), feedback)
+            utm_zone = self.find_utm_zone(input_layer.extent(), feedback)
         else:
-            utmZone = self.FindUtmZone(rect, feedback)
-        feedback.pushInfo('UTM Zone: {0}'.format(utmZone)) 
+            utm_zone = self.find_utm_zone(rect, feedback)
+        feedback.pushInfo('UTM Zone: {0}'.format(utm_zone))
         
         # -Reproject to UTM- 
-        utmLayer  = self.ReprojectToUtm(inputLayer, utmZone, context, feedback)
-        feedback.pushInfo("Layer reprojected to 'UTM Zone: {0}'".format(utmZone)) 
+        utm_layer = self.reproject_to_utm(input_layer, utm_zone, context, feedback)
+        feedback.pushInfo("Layer reprojected to 'UTM Zone: {0}'".format(utm_zone))
             
-        _uri = 'polygon?crs={}&index=yes'.format(utmLayer.crs().authid().lower())
-        sinkLayer = QgsVectorLayer(_uri, 'tempSinkLayer', 'memory')
-        sinkLayer_pr = sinkLayer.dataProvider() 
-        sinkLayer_pr.addAttributes(inputLayer.fields())
-        sinkLayer.updateFields()
+        _uri = 'polygon?crs={}&index=yes'.format(utm_layer.crs().authid().lower())
+        sink_layer = QgsVectorLayer(_uri, 'tempSinkLayer', 'memory')
+        sink_layer_pr = sink_layer.dataProvider()
+        sink_layer_pr.addAttributes(input_layer.fields())
+        sink_layer.updateFields()
         
-        total = 100.0 / utmLayer.featureCount()
-        for currentFeature, feature in enumerate(utmLayer.getFeatures(), start=1):
+        total = 100.0 / utm_layer.featureCount()
+        for currentFeature, feature in enumerate(utm_layer.getFeatures(), start=1):
             if feedback.isCanceled():
                 return {}
 
@@ -142,29 +143,29 @@ class pointstorectangles(QgsProcessingAlgorithm):
             geom = feature.geometry()
             p = geom.asPoint()
             
-            #width_1 = (feature.attribute(widthAttribute) * 0.3048)
-            #length_1 = (feature.attribute(distanceAttribute) * 0.3048) 
-            #============================================================
-            width = lengthunits.LengthUnit(feature.attribute(widthAttribute), 'ft', 'm').doconvert()
-            length = lengthunits.LengthUnit(feature.attribute(distanceAttribute), 'ft', 'm').doconvert()
-            direction = feature.attribute(headingAttribute)       
+            # width_1 = (feature.attribute(widthAttribute) * 0.3048)
+            # length_1 = (feature.attribute(distanceAttribute) * 0.3048)
+            # ============================================================
+            width = lengthunits.LengthUnit(feature.attribute(width_attribute), 'ft', 'm').doconvert()
+            length = lengthunits.LengthUnit(feature.attribute(distance_attribute), 'ft', 'm').doconvert()
+            direction = feature.attribute(heading_attribute)
             center = (p.x(), p.y())
 
             poly = QgsFeature()
             points = self.rectangle(width, length, -direction, center, feedback)
-            pointsXY = []
+            points_xy = []
             for point in points:
-                pointsXY.append(QgsPointXY(point))
-            poly.setGeometry(QgsGeometry.fromPolygonXY([pointsXY])) 
+                points_xy.append(QgsPointXY(point))
+            poly.setGeometry(QgsGeometry.fromPolygonXY([points_xy]))
             poly.setAttributes(feature.attributes())
-            sinkLayer_pr.addFeature(poly)        
+            sink_layer_pr.addFeature(poly)
         
         # -Reproject to WGS 84- 
-        wgs84Layer = self.ReprojectToWgs84(sinkLayer, context, feedback)
+        wgs84_layer = self.reproject_to_wgs84(sink_layer, context, feedback)
         feedback.pushInfo("Layer reprojected to 'WGS 84'")     
-        sink.addFeatures(wgs84Layer.getFeatures(), QgsFeatureSink.FastInsert)  
+        sink.addFeatures(wgs84_layer.getFeatures(), QgsFeatureSink.FastInsert)
 
-        inputLayer = None            
+        input_layer = None
 
         return {self.OUTPUT: dest_id}     # results
 
@@ -181,5 +182,5 @@ class pointstorectangles(QgsProcessingAlgorithm):
         return 'firstpasstools'
 
     def createInstance(self):
-        return pointstorectangles()
+        return PointsToRectangles()
 
