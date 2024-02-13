@@ -41,10 +41,10 @@ class StraightEdge(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterField(self.UNIQUE_VALUE_COLUMN, self.tr('Column with unique values'), 'id', self.INPUT, QgsProcessingParameterField.Any, optional=False))
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Straight edges'), type=QgsProcessing.TypeVectorLine))
 
-    def angleDiff(self, angle1, angle2):
+    def angle_diff(self, angle1, angle2):
         return 180 - abs(abs(angle1 - angle2) - 180)
 
-    def ReprojectLayer(self, _in_layer, to_epsg, _context, _feedback):
+    def reproject_layer(self, _in_layer, to_epsg, _context, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -54,7 +54,7 @@ class StraightEdge(QgsProcessingAlgorithm):
         _reprojectedLayer = processing.run('native:reprojectlayer', _parameter, context=_context)['OUTPUT']
         return _reprojectedLayer
 
-    def calculateDistance(self, _feature):
+    def calculate_distance(self, _feature):
         calculator = QgsDistanceArea()
         calculator.setEllipsoid('WGS84')
 
@@ -62,7 +62,7 @@ class StraightEdge(QgsProcessingAlgorithm):
         _distance = calculator.measureLength(geom)
         return _distance
 
-    def calculateAzimuth(self, v1, v2):
+    def calculate_azimuth(self, v1, v2):
         _azimuth = None
         if v1.isEmpty() is False and v2.isEmpty() is False:
             _azimuth = math.trunc(v1.azimuth(v2))
@@ -72,7 +72,7 @@ class StraightEdge(QgsProcessingAlgorithm):
             _azimuth = 0
         return _azimuth
 
-    def updateAzimuthAttribute(self, _layer, _context, _feedback):
+    def update_azimuth_attribute(self, _layer, _context, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -83,10 +83,10 @@ class StraightEdge(QgsProcessingAlgorithm):
                 line_geom = _feature.geometry().asPolyline()
                 start_point = line_geom[0]
                 end_point = line_geom[-1]
-                _azimuth = self.calculateAzimuth(start_point, end_point)
+                _azimuth = self.calculate_azimuth(start_point, end_point)
                 _layer.changeAttributeValue(_feature.id(), field_index_azimuth, _azimuth)
 
-    def getStartEndPoints(self, _feature_line):
+    def get_start_end_points(self, _feature_line):
         first_vertex = None
         last_vertex = None
         for part in _feature_line.geometry().constGet():
@@ -107,7 +107,7 @@ class StraightEdge(QgsProcessingAlgorithm):
         # let's make sure the layer is in "wgs 84"
         input_layer_crs = input_layer.crs()  # save it to use to create the output with same CRS
         if input_layer_crs.authid() != 'EPSG:4326':
-            in_layer = self.ReprojectLayer(input_layer, 'epsg:4326', context, feedback)
+            in_layer = self.reproject_layer(input_layer, 'epsg:4326', context, feedback)
             feedback.pushInfo(self.tr("Layer reprojected to 'WGS 84'"))
         else:
             input_layer.selectAll()
@@ -141,7 +141,7 @@ class StraightEdge(QgsProcessingAlgorithm):
             layer_provider.addAttributes(in_layer_fields)
             explodelines_result.updateFields()
 
-            self.updateAzimuthAttribute(explodelines_result, context, feedback)
+            self.update_azimuth_attribute(explodelines_result, context, feedback)
 
             _uri = 'Linestring?crs=epsg:4326&field=azimuth:integer&field=distance:double&field=input_id:string&index=yes'
             sink_layer = QgsVectorLayer(_uri, 'tempSinkLayer', 'memory')
@@ -167,16 +167,16 @@ class StraightEdge(QgsProcessingAlgorithm):
                     linestring.append(feature_1.geometry())
                     line_azimuth = azimuth_1
 
-                azimuth_diff = self.angleDiff(azimuth_1, azimuth_2)
+                azimuth_diff = self.angle_diff(azimuth_1, azimuth_2)
                 if azimuth_diff <= threshold_angle:
                     linestring.append(feature_2.geometry())
                 else:
                     out_feat = QgsFeature()
                     out_feat.setGeometry(QgsGeometry().collectGeometry(linestring))
-                    start_point = self.getStartEndPoints(out_feat)[0]
-                    end_point = self.getStartEndPoints(out_feat)[1]
-                    _azimuth = self.calculateAzimuth(start_point, end_point)
-                    _distance = self.calculateDistance(out_feat)
+                    start_point = self.get_start_end_points(out_feat)[0]
+                    end_point = self.get_start_end_points(out_feat)[1]
+                    _azimuth = self.calculate_azimuth(start_point, end_point)
+                    _distance = self.calculate_distance(out_feat)
                     _input_id = str(record[unique_value_column])
                     out_feat.setAttributes([_azimuth, _distance, _input_id])
                     sink_layer_pr.addFeature(out_feat)
