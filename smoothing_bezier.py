@@ -16,8 +16,7 @@ from qgis.core import (QgsProcessing,
                        QgsField,
                        QgsFeatureSink,
                        QgsProject,
-                       QgsWkbTypes
-                       )
+                       QgsWkbTypes)
 
 from sys import path
 import os
@@ -42,7 +41,7 @@ class SmoothBezier(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterNumber(self.NUMBERS_OF_POINTS_TO_PLOT, self.tr('Numbers of points to plot'), type=QgsProcessingParameterNumber.Integer, minValue=10, defaultValue=25))
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Line smoothed'), type=QgsProcessing.TypeVectorLine))
 
-    def createTempLayer(self, _input_layer):
+    def create_temp_layer(self, _input_layer):
         # Convert its geometry type enum to a string we can pass to utils.createOutputVector function
         in_layer_geometry_type = ['Point', 'Linestring', 'Polygon'][_input_layer.geometryType()]
         _temp_layer = utils.create_output_vector(_input_layer, in_layer_geometry_type)
@@ -52,7 +51,7 @@ class SmoothBezier(QgsProcessingAlgorithm):
         _temp_layer.updateFields()
         return _temp_layer
 
-    def addFeatureToLayer(self, _temp_layer, _output_curve_points, _fid):
+    def add_feature_to_layer(self, _temp_layer, _output_curve_points, _fid):
         out_feat = QgsFeature()
         out_feat.setGeometry(QgsGeometry.fromPolyline(_output_curve_points))
         out_feat.setAttributes([_fid])
@@ -61,11 +60,11 @@ class SmoothBezier(QgsProcessingAlgorithm):
         _temp_layer.updateExtents()
         return _temp_layer
 
-    def getLineCentroid(self, _point_a_x, _point_a_y, _point_b_x, _point_b_y):
+    def get_line_centroid(self, _point_a_x, _point_a_y, _point_b_x, _point_b_y):
         point_centroid = QgsGeometry.fromPolyline([QgsPoint(_point_a_x, _point_a_y), QgsPoint(_point_b_x, _point_b_y)]).centroid()
         return point_centroid
 
-    def numberOfVertices(self, _vertex_iterator):
+    def number_of_vertices(self, _vertex_iterator):
         count = 0
         for vertex in _vertex_iterator:
             count += 1
@@ -79,13 +78,13 @@ class SmoothBezier(QgsProcessingAlgorithm):
         input_layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
         numbers_of_points_to_plot = self.parameterAsInt(parameters, self.NUMBERS_OF_POINTS_TO_PLOT, context)
 
-        temp_layer = self.createTempLayer(input_layer)
+        temp_layer = self.create_temp_layer(input_layer)
 
         features = input_layer.getFeatures()
         for j, feature in enumerate(features):
             output_curve_points = []
             geom = feature.geometry()
-            number_of_vertices = self.numberOfVertices(geom.vertices())
+            number_of_vertices = self.number_of_vertices(geom.vertices())
             for i in range(number_of_vertices):
                 # Find adjacents vertices for each vertice
                 adjacent_vertices = geom.adjacentVertices(i)
@@ -102,22 +101,22 @@ class SmoothBezier(QgsProcessingAlgorithm):
                         point_a_x = geom.vertexAt(adjacent_vertices[0]).x()
                         point_a_y = geom.vertexAt(adjacent_vertices[0]).y()
 
-                        point_c = self.getLineCentroid(point_center_x, point_center_y, geom.vertexAt(adjacent_vertices[1]).x(), geom.vertexAt(adjacent_vertices[1]).y()).asPoint()
+                        point_c = self.get_line_centroid(point_center_x, point_center_y, geom.vertexAt(adjacent_vertices[1]).x(), geom.vertexAt(adjacent_vertices[1]).y()).asPoint()
                         point_c_x = point_c.x()
                         point_c_y = point_c.y()
                     elif i == number_of_vertices - 2:
-                        point_a = self.getLineCentroid(geom.vertexAt(adjacent_vertices[0]).x(), geom.vertexAt(adjacent_vertices[0]).y(), point_center_x, point_center_y).asPoint()
+                        point_a = self.get_line_centroid(geom.vertexAt(adjacent_vertices[0]).x(), geom.vertexAt(adjacent_vertices[0]).y(), point_center_x, point_center_y).asPoint()
                         point_a_x = point_a.x()
                         point_a_y = point_a.y()
 
                         point_c_x = geom.vertexAt(adjacent_vertices[1]).x()
                         point_c_y = geom.vertexAt(adjacent_vertices[1]).y()
                     else:
-                        point_a = self.getLineCentroid(geom.vertexAt(adjacent_vertices[0]).x(), geom.vertexAt(adjacent_vertices[0]).y(), point_center_x, point_center_y).asPoint()
+                        point_a = self.get_line_centroid(geom.vertexAt(adjacent_vertices[0]).x(), geom.vertexAt(adjacent_vertices[0]).y(), point_center_x, point_center_y).asPoint()
                         point_a_x = point_a.x()
                         point_a_y = point_a.y()
 
-                        point_c = self.getLineCentroid(point_center_x, point_center_y, geom.vertexAt(adjacent_vertices[1]).x(), geom.vertexAt(adjacent_vertices[1]).y()).asPoint()
+                        point_c = self.get_line_centroid(point_center_x, point_center_y, geom.vertexAt(adjacent_vertices[1]).x(), geom.vertexAt(adjacent_vertices[1]).y()).asPoint()
                         point_c_x = point_c.x()
                         point_c_y = point_c.y()
 
@@ -134,7 +133,7 @@ class SmoothBezier(QgsProcessingAlgorithm):
                     for n in range(numbers_of_points_to_plot):
                         output_curve_point = QgsPoint(points_in_bezier_curve[0][n], points_in_bezier_curve[1][n])
                         output_curve_points.append(output_curve_point)
-            self.addFeatureToLayer(temp_layer, output_curve_points, (j+1))
+            self.add_feature_to_layer(temp_layer, output_curve_points, (j + 1))
 
         # OUTPUT
         parameters['OUTPUT'].destinationName = 'Line-Smoothed-Bezier-{}'.format(input_layer.name())
