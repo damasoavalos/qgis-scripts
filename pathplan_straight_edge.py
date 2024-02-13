@@ -65,10 +65,10 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         self.addOutput(QgsProcessingOutputVectorLayer(self.OUTPUT_STRAIGHT_EDGES, self.tr('Straight edges layer'), QgsProcessing.TypeVectorLine))
         self.addParameter(QgsProcessingParameterFileDestination(self.OUTPUT_HTML_FILE, 'Output HTML file', 'HTML files (*.html)', defaultValue=None, optional=False, createByDefault=True))
 
-    def createHTML(self, _output_html_file, _output_file_data, _boundaryid_layer, _number_match):
-        str_html = ''
-        str_boundaryid = ''
-        str_difference = ''
+    def create_html(self, _output_html_file, _output_file_data, _boundaryid_layer, _number_match):
+        # str_html = ''
+        # str_boundaryid = ''
+        # str_difference = ''
         with codecs.open(_output_html_file, 'w', encoding='utf-8') as f:
             # html heading
             str_html = '<html>' \
@@ -125,15 +125,15 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                                   '</html>'
             f.write(str_html)
 
-    def createVisualOutput(self, _sink_straight_layer, context):
+    def create_visual_output(self, _sink_straight_layer, context):
         _sink_straight_layer.renderer().symbol().setColor(QColor.fromRgb(12, 5, 232, 255))
         _sink_straight_layer.renderer().symbol().setWidth(2)
         _sink_straight_layer.triggerRepaint()
 
-    def angleDiff(self, angle1, angle2):
+    def angle_diff(self, angle1, angle2):
         return 180 - abs(abs(angle1 - angle2) - 180)
 
-    def ReprojectLayer(self, _in_layer, to_epsg, _context, _feedback):
+    def reproject_layer(self, _in_layer, to_epsg, _context, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -143,7 +143,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         _reprojectedLayer = processing.run('native:reprojectlayer', _parameter, context=_context)['OUTPUT']
         return _reprojectedLayer
 
-    def calculateDistance(self, _feature):
+    def calculate_distance(self, _feature):
         calculator = QgsDistanceArea()
         calculator.setEllipsoid('WGS84')
 
@@ -151,7 +151,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         _distance = calculator.measureLength(geom)
         return _distance
 
-    def calculateAzimuth(self, v1, v2):
+    def calculate_azimuth(self, v1, v2):
         _azimuth = None
         if v1.isEmpty() is False and v2.isEmpty() is False:
             _azimuth = math.trunc(v1.azimuth(v2))
@@ -161,7 +161,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
             _azimuth = 0
         return _azimuth
 
-    def updateAzimuthAttribute(self, _layer, _context, _feedback):
+    def update_azimuth_attribute(self, _layer, _context, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -172,10 +172,10 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                 line_geom = _feature.geometry().asPolyline()
                 start_point = line_geom[0]
                 end_point = line_geom[-1]
-                _azimuth = self.calculateAzimuth(start_point, end_point)
+                _azimuth = self.calculate_azimuth(start_point, end_point)
                 _layer.changeAttributeValue(_feature.id(), field_index_bearing, _azimuth)
 
-    def getStartEndPoints(self, _feature_line):
+    def get_start_end_points(self, _feature_line):
         first_vertex = None
         last_vertex = None
         for part in _feature_line.geometry().constGet():
@@ -183,7 +183,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
             last_vertex = part[-1]
         return first_vertex, last_vertex
 
-    def deleteColumns(self, _layer):
+    def delete_columns(self, _layer):
         with edit(_layer):
             field_to_delete = []
             for field in _layer.fields():
@@ -195,7 +195,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                 res = _layer.dataProvider().deleteAttributes(field_to_delete)
                 _layer.updateFields()
 
-    def deleteColumn(self, _layer, _column):
+    def delete_column(self, _layer, _column):
         with edit(_layer):
             column_index = _layer.fields().indexFromName(_column)
             caps = _layer.dataProvider().capabilities()
@@ -203,7 +203,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                 res = _layer.dataProvider().deleteAttributes([column_index])
                 _layer.updateFields()
 
-    def populateOutputResult(self, _sink_straight_layer, _path_plan_name, _threshold_angle, _feedback):
+    def populate_output_result(self, _sink_straight_layer, _path_plan_name, _threshold_angle, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -231,8 +231,8 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         counter = 100. / _result_layer.featureCount()
         with edit(_result_layer):
             for _record in _records:
-                diff = int(self.angleDiff(int(_record['straight_edge_bearing']), int(_record['optimal_bearing'])))
-                opposite_diff = int(self.angleDiff(int((_record['straight_edge_bearing'] + 180) % 360), int(_record['optimal_bearing'])))
+                diff = int(self.angle_diff(int(_record['straight_edge_bearing']), int(_record['optimal_bearing'])))
+                opposite_diff = int(self.angle_diff(int((_record['straight_edge_bearing'] + 180) % 360), int(_record['optimal_bearing'])))
                 if diff <= _threshold_angle:
                     _result_layer.changeAttributeValue(_record.id(), field_index_difference, diff)
                     _result_layer.changeAttributeValue(_record.id(), field_index_match, 'true')
@@ -244,7 +244,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                     _result_layer.changeAttributeValue(_record.id(), field_index_difference, diff)
                     _result_layer.changeAttributeValue(_record.id(), field_index_match, 'false')
                 _feedback.setProgress(_record.id() * counter)
-        self.deleteColumn(_result_layer, 'optimal_bearings')
+        self.delete_column(_result_layer, 'optimal_bearings')
 
         # distinct boundary_id
         _sql_bondary_id = "select distinct boundary_id, 'false' as match from '" + _path_plan_name + "'"
@@ -275,7 +275,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
 
         return _result_layer, _boundaryid_layer, _number_match
 
-    def loadPathPlanLayer(self, _path_plan_name, _feedback):
+    def load_path_plan_layer(self, _path_plan_name, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -323,7 +323,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         # let's make sure the layer is in "wgs 84"
         input_layer_crs = input_layer.crs()  # save it to use to create the output with same CRS
         if input_layer_crs.authid() != 'EPSG:4326':
-            in_layer = self.ReprojectLayer(input_layer, 'epsg:4326', context, feedback)
+            in_layer = self.reproject_layer(input_layer, 'epsg:4326', context, feedback)
             feedback.pushInfo(self.tr("Layer reprojected to 'WGS 84'"))
         else:
             input_layer.selectAll()
@@ -359,7 +359,7 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
             layer_provider.addAttributes(in_layer_fields)
             explodelines_result.updateFields()
 
-            self.updateAzimuthAttribute(explodelines_result, context, feedback)
+            self.update_azimuth_attribute(explodelines_result, context, feedback)
 
             _uri = 'Linestring?crs=epsg:4326&field=bearing:integer&field=rank:integer&field=distance:double&field=input_id:string&index=yes'
             straight_edges_layer = QgsVectorLayer(_uri, 'tempStraightEdgesLayer', 'memory')
@@ -386,16 +386,16 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
                     linestring.append(feature_1.geometry())
                     line_azimuth = azimuth_1
 
-                azimuth_diff = self.angleDiff(azimuth_1, azimuth_2)
+                azimuth_diff = self.angle_diff(azimuth_1, azimuth_2)
                 if azimuth_diff <= threshold_angle:
                     linestring.append(feature_2.geometry())
                 else:
                     out_feat = QgsFeature()
                     out_feat.setGeometry(QgsGeometry().collectGeometry(linestring))
-                    start_point = self.getStartEndPoints(out_feat)[0]
-                    end_point = self.getStartEndPoints(out_feat)[1]
-                    _azimuth = self.calculateAzimuth(start_point, end_point)
-                    _distance = self.calculateDistance(out_feat)
+                    start_point = self.get_start_end_points(out_feat)[0]
+                    end_point = self.get_start_end_points(out_feat)[1]
+                    _azimuth = self.calculate_azimuth(start_point, end_point)
+                    _distance = self.calculate_distance(out_feat)
                     _input_id = str(record[unique_value_column])
                     out_feat.setAttributes([_azimuth, _rank, _distance, _input_id])
                     straight_edges_layer_pr.addFeature(out_feat)
@@ -422,12 +422,12 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
         feedback.setProgressText(self.tr('Working with input layer…  Done'))
 
         feedback.setProgressText(self.tr('Creating Plan Path layer…'))
-        plan_layer = self.loadPathPlanLayer(path_plan_name, feedback)
+        plan_layer = self.load_path_plan_layer(path_plan_name, feedback)
         QgsProject.instance().addMapLayer(sink_straight_layer)
         feedback.setProgressText(self.tr('Plan Path layer…  Done'))
 
         feedback.setProgressText(self.tr('Creating table result…'))
-        result_layer, boundaryid_layer, number_match = self.populateOutputResult('straight_edges', path_plan_name, threshold_angle, feedback)
+        result_layer, boundaryid_layer, number_match = self.populate_output_result('straight_edges', path_plan_name, threshold_angle, feedback)
         QgsProject.instance().removeMapLayer(QgsProject.instance().mapLayersByName(path_plan_name)[0].id())
         # QgsProject.instance().addMapLayer(result_layer)
         feedback.setProgressText(self.tr('Table result…  Done'))
@@ -439,17 +439,23 @@ class PathPlanStraightEdge(QgsProcessingAlgorithm):
 
         output_html_file = self.parameterAsFileOutput(parameters, self.OUTPUT_HTML_FILE, context)
         if output_html_file:
-            self.createHTML(output_html_file, result_layer, boundaryid_layer, number_match)
+            self.create_html(output_html_file, result_layer, boundaryid_layer, number_match)
         result[self.OUTPUT_HTML_FILE] = output_html_file
 
-        self.createVisualOutput(sink_straight_layer, context)
+        self.create_visual_output(sink_straight_layer, context)
 
         # adding layer to load on completion
         context.temporaryLayerStore().addMapLayer(result_layer)
-        context.addLayerToLoadOnCompletion(result_layer.id(), QgsProcessingContext.LayerDetails(QgsProcessingContext.LayerDetails('path_plan_and_results',
-                                                                                                                                  context.project(),
-                                                                                                                                  self.OUTPUT_STRAIGHT_EDGES)))
-
+        context.addLayerToLoadOnCompletion(
+            result_layer.id(),
+            QgsProcessingContext.LayerDetails(
+                QgsProcessingContext.LayerDetails(
+                    'path_plan_and_results',
+                    context.project(),
+                    self.OUTPUT_STRAIGHT_EDGES
+                )
+            )
+        )
         return result
 
     def name(self):
