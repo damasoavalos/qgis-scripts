@@ -35,7 +35,6 @@ def bezier_curve(_points, _n_times=1000):
     _yPoints = np.array([p[1] for p in _points])
 
     bp = []
-    polynomial_array = []
     t = np.linspace(0.0, 1.0, _n_times)
     for i in range(0, _nPoints):
         bp.append(bernstein_poly(i, _nPoints - 1, t))
