@@ -1,10 +1,10 @@
-import os
-import sys
-import re
+# import os
+# import sys
+# import re
 
-#from osgeo import ogr, osr
-from geopy import distance
-from pyproj import CRS
+# from osgeo import ogr, osr
+# from geopy import distance
+# from pyproj import CRS
 
 from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
@@ -52,9 +52,9 @@ class Namefields(QgsProcessingAlgorithm):
     # def angle_diff(self, angle1, angle2):
     #     return 180 - abs(abs(angle1 - angle2) - 180)
     
-    #def ReprojectLayer(self, _in_layer, to_epsg, _context, _feedback):
-    #    if _feedback.isCanceled():
-    #           return {} 
+    def reproject_layer(self, _in_layer, to_epsg, _context, _feedback):
+        if _feedback.isCanceled():
+            return {}
                   
     #    #_stringWebMercatorCrs = CRS.from_user_input('WGS 84').to_string()  # this line return 'EPSG:4326'.           
     #    _parameter = {'INPUT': _in_layer, 'TARGET_CRS': to_epsg, 'OUTPUT': 'memory:temp'}
@@ -139,36 +139,63 @@ class Namefields(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT, 'As-applied data points', types=[QgsProcessing.TypeVectorPolygon], defaultValue=None))        
-        #self.addParameter(QgsProcessingParameterField(name=self.HEADINGFIELD, description='Heading field', defaultValue='heading', parentLayerParameterName=self.INPUT, type=QgsProcessingParameterField.Any, optional=False))
-        #self.addParameter(QgsProcessingParameterField(name=self.DISTANCEFIELD, description='Distance field', defaultValue='distance', parentLayerParameterName=self.INPUT, type=QgsProcessingParameterField.Any, optional=False))
-        #self.addParameter(QgsProcessingParameterField(name=self.SORTBYFIELD, description='Field to sort by', defaultValue='timestamp', parentLayerParameterName=self.INPUT, type=QgsProcessingParameterField.Any, optional=False))
-        self.addParameter(QgsProcessingParameterField(name=self.GROUPBYFIELD, description='Field to group by', defaultValue='VehicleID', parentLayerParameterName=self.INPUT, type=QgsProcessingParameterField.Any, optional=True))
-        #self.addParameter(QgsProcessingParameterNumber(self.ANGLE, 'Angle (180° to create the whole path)', type=QgsProcessingParameterNumber.Integer, minValue=1, maxValue=180, defaultValue=5))
-        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, 'As-applied lines', type=QgsProcessing.TypeVectorLine))
+        # self.addParameter(QgsProcessingParameterField(name=self.HEADINGFIELD,
+        #                                               description='Heading field',
+        #                                               defaultValue='heading',
+        #                                               parentLayerParameterName=self.INPUT,
+        #                                               type=QgsProcessingParameterField.Any,
+        #                                               optional=False))
+        # self.addParameter(QgsProcessingParameterField(name=self.DISTANCEFIELD,
+        #                                               description='Distance field',
+        #                                               defaultValue='distance',
+        #                                               parentLayerParameterName=self.INPUT,
+        #                                               type=QgsProcessingParameterField.Any,
+        #                                               optional=False))
+        # self.addParameter(QgsProcessingParameterField(name=self.SORTBYFIELD,
+        #                                               description='Field to sort by',
+        #                                               defaultValue='timestamp',
+        #                                               parentLayerParameterName=self.INPUT,
+        #                                               type=QgsProcessingParameterField.Any,
+        #                                               optional=False))
+        self.addParameter(QgsProcessingParameterField(name=self.GROUPBYFIELD,
+                                                      description='Field to group by',
+                                                      defaultValue='VehicleID',
+                                                      parentLayerParameterName=self.INPUT,
+                                                      type=QgsProcessingParameterField.Any,
+                                                      optional=True))
+        # self.addParameter(QgsProcessingParameterNumber(self.ANGLE,
+        #                                                'Angle (180° to create the whole path)',
+        #                                                type=QgsProcessingParameterNumber.Integer,
+        #                                                minValue=1,
+        #                                                maxValue=180,
+        #                                                defaultValue=5))
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT,
+                                                            'As-applied lines',
+                                                            type=QgsProcessing.TypeVectorLine))
 
     def processAlgorithm(self, parameters, context, feedback):
                
-        inputLayer = self.parameterAsVectorLayer(parameters, self.INPUT, context)      
-        groupByAttribute = self.parameterAsString(parameters, self.GROUPBYFIELD, context)
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, inputLayer.fields(), QgsWkbTypes.MultiPolygon, inputLayer.crs())  
+        input_layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
+        group_by_attribute = self.parameterAsString(parameters, self.GROUPBYFIELD, context)
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, input_layer.fields(), QgsWkbTypes.MultiPolygon, input_layer.crs())
 
         ids = (640, 719, 972, 1249, 1251, 1356, 1453, 3308, 3439, 3445, 3448, 3451, 3453, 3929, 3930, 3931, 3932, 3934, 3935, 3936, 3937, 3938, 3939, 3940, 3941, 3998, 4035, 4085, 5000, 5717, 6076, 6079, 6081, 6276, 8373, 8787, 8905, 9221, 9369, 9958, 11604, 11687, 12094, 12274, 12728, 12730, 12780, 13037, 13380, 13404, 13517, 13519, 13520, 13521, 13522, 13681, 14204, 14331, 14710, 15132, 15526)
 
-        for id in ids:
-            expression = "{0} = {1}".format(groupByAttribute, id)
+        for _id in ids:
+            expression = "{0} = {1}".format(group_by_attribute, _id)
             request = QgsFeatureRequest().setFilterExpression(expression) 
             clause = QgsFeatureRequest.OrderByClause('id', ascending=True)
             orderby = QgsFeatureRequest.OrderBy([clause])
             request.setOrderBy(orderby)
-            features = inputLayer.getFeatures(request)
+            features = input_layer.getFeatures(request)
             i = 0
             for feature in features:
                 i += 1
                 feature['fieldname'] = '{0}-{1}'.format(feature['farmid'], i)
                 sink.addFeature(feature) 
                    
-            ##(sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, inputLayer.fields(), QgsWkbTypes.Polygon, inputLayer.crs())  
-            #sink.addFeatures(inputLayer.getFeatures(), QgsFeatureSink.FastInsert)           
+            # # (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, input_layer.fields(), QgsWkbTypes.Polygon, input_layer.crs())
+            # sink.addFeatures(input_layer.getFeatures(), QgsFeatureSink.FastInsert)
        
         results = {}
         outputs = {}
