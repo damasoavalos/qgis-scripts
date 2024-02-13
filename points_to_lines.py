@@ -1,6 +1,6 @@
-import os
-import sys
-import re
+# import os
+# import sys
+# import re
 
 # from osgeo import ogr, osr
 from geopy import distance
@@ -46,14 +46,14 @@ class PointsToLines(QgsProcessingAlgorithm):
         self.outLayer = None        
 
     # use the vincenty formula to get accurate distance measurements
-    def sphereDistance(self, from_point, to_point):
+    def sphere_distance(self, from_point, to_point):
         distance.geodesic.ELLIPSOID = 'WGS-84'
         return distance.distance(from_point, to_point).meters
 
-    def angleDiff(self, angle1, angle2):
+    def angle_diff(self, angle1, angle2):
         return 180 - abs(abs(angle1 - angle2) - 180)
     
-    def ReprojectLayer(self, _in_layer, to_epsg, _context, _feedback):
+    def reproject_layer(self, _in_layer, to_epsg, _context, _feedback):
         if _feedback.isCanceled():
             return {}
                   
@@ -62,7 +62,7 @@ class PointsToLines(QgsProcessingAlgorithm):
         _reprojectedLayer = processing.run('native:reprojectlayer', _parameter, context=_context)['OUTPUT'] 
         return _reprojectedLayer
     
-    def GetStats(self, _features, _field_name, _feedback):  
+    def get_stats(self, _features, _field_name, _feedback):
         if _feedback.isCanceled():
             return {}
         
@@ -84,7 +84,7 @@ class PointsToLines(QgsProcessingAlgorithm):
             'sum': round(stat.sum(), 4)
             }
          
-    def addLine(self, _points_list, _dist, _feedback):
+    def add_line(self, _points_list, _dist, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -98,7 +98,7 @@ class PointsToLines(QgsProcessingAlgorithm):
         out_feat.setAttributes([_heading, round(_dist, 2), len(_points_list)])
         return out_feat
 
-    def processFeatures(self, _features, _angle, _stat, _heading_attribute, _distance_attribute, _temp_pr, _feedback):
+    def process_features(self, _features, _angle, _stat, _heading_attribute, _distance_attribute, _temp_pr, _feedback):
         if _feedback.isCanceled():
             return {}
 
@@ -120,20 +120,20 @@ class PointsToLines(QgsProcessingAlgorithm):
             if not _pointsList:
                 _pointsList.append(point1)   
                 
-            point_distance = self.sphereDistance((point1.y(), point1.x()), (point2.y(), point2.x()))
-            if self.angleDiff(heading1, heading2) <= _angle and point_distance < _stat['majority']*2:
+            point_distance = self.sphere_distance((point1.y(), point1.x()), (point2.y(), point2.x()))
+            if self.angle_diff(heading1, heading2) <= _angle and point_distance < _stat['majority']*2:
                 _distance = _distance + point_distance
                 _pointsList.append(point2)
             else:
                 if _distance > 0:                  
-                    _temp_pr.addFeature(self.addLine(_pointsList, _distance, _feedback))
+                    _temp_pr.addFeature(self.add_line(_pointsList, _distance, _feedback))
                 # _temp_pr.addFeature(self.addLine(_points_list, _distance, _feedback))
                 _pointsList.clear()
                 _distance = 0
             feature1 = feature2
         # this is to make sure the last line get added
         if _distance > 0:
-            _temp_pr.addFeature(self.addLine(_pointsList, _distance, _feedback))
+            _temp_pr.addFeature(self.add_line(_pointsList, _distance, _feedback))
             _pointsList.clear()
             _distance = 0
         # return _sink
@@ -167,7 +167,7 @@ class PointsToLines(QgsProcessingAlgorithm):
         # let's make sure the layer is in "wgs 84" so "distance.geodesic.ELLIPSOID" can be calculated it
         input_layer_crs = input_layer.crs()  # save it to use to create the output with same CRS
         if input_layer_crs.authid() != 'EPSG:4326':
-            in_layer = self.ReprojectLayer(input_layer, 'epsg:4326', context, feedback)
+            in_layer = self.reproject_layer(input_layer, 'epsg:4326', context, feedback)
             # feedback.pushInfo("Layer reprojected to 'WGS 84'")
         else:
             in_layer = input_layer.clone()
@@ -192,8 +192,8 @@ class PointsToLines(QgsProcessingAlgorithm):
                 orderby = QgsFeatureRequest.OrderBy([clause])
                 request.setOrderBy(orderby)
                
-                stat_in_layer = self.GetStats(in_layer.getFeatures(request), distance_attribute, feedback)
-                self.processFeatures(in_layer.getFeatures(request), angle, stat_in_layer, heading_attribute, distance_attribute, sink_layer_pr, feedback)
+                stat_in_layer = self.get_stats(in_layer.getFeatures(request), distance_attribute, feedback)
+                self.process_features(in_layer.getFeatures(request), angle, stat_in_layer, heading_attribute, distance_attribute, sink_layer_pr, feedback)
         else:
             
             request = QgsFeatureRequest()
@@ -201,14 +201,14 @@ class PointsToLines(QgsProcessingAlgorithm):
             orderby = QgsFeatureRequest.OrderBy([clause])
             request.setOrderBy(orderby)
 
-            stat_in_layer = self.GetStats(in_layer.getFeatures(request), distance_attribute, feedback)
-            self.processFeatures(in_layer.getFeatures(request), angle, stat_in_layer, heading_attribute, distance_attribute, sink_layer_pr, feedback)
+            stat_in_layer = self.get_stats(in_layer.getFeatures(request), distance_attribute, feedback)
+            self.process_features(in_layer.getFeatures(request), angle, stat_in_layer, heading_attribute, distance_attribute, sink_layer_pr, feedback)
         
         # Reproject output layer to input layer crs 
         if input_layer_crs.authid() != 'EPSG:4326':
-            sink_layer = self.ReprojectLayer(sink_layer, input_layer_crs.authid(), context, feedback)
+            sink_layer = self.reproject_layer(sink_layer, input_layer_crs.authid(), context, feedback)
         
-        stat_sink_layer = self.GetStats(sink_layer.getFeatures(), 'distance', feedback)
+        stat_sink_layer = self.get_stats(sink_layer.getFeatures(), 'distance', feedback)
         feedback.pushInfo("Total distance: {:,} meters".format(stat_sink_layer['sum']))
             
         parameters['OUTPUT'].destinationName = 'As-applied lines angle {}'.format(int(angle))
