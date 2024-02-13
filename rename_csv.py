@@ -17,23 +17,28 @@ class RenameCsv(QgsProcessingAlgorithm):
         # self.addParameter(QgsProcessingParameterNumber(self.OUTPUT, 'No of files', type:QgsProcessingParameterNumber.Integer, defaultValue=None))
         
     def processAlgorithm(self, parameters, context, model_feedback):
-        # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
+        # Use a multistep feedback, so that individual child algorithm progress reports are adjusted for the
         # overall progress through the model
         feedback = QgsProcessingMultiStepFeedback(0, model_feedback)
 
         parent_folder = self.parameterAsFile(parameters, self.INPUT, context)
+        input_folder = None
+        file = None
         for name in os.listdir(parent_folder):
-           if os.path.isdir(os.path.join(parent_folder, name)):
-               Input_Folder = os.path.join(parent_folder, name)               
-                            
-           for file in os.listdir(Input_Folder):
-               if '#' in file:
-                   os.rename(os.path.join(Input_Folder, file), os.path.join(Input_Folder, file.replace('#', '') ))
+            if os.path.isdir(os.path.join(parent_folder, name)):
+                input_folder = os.path.join(parent_folder, name)
+
+            for file in os.listdir(input_folder):
+                if '#' in file:
+                    os.rename(os.path.join(input_folder, file),
+                              os.path.join(input_folder, file.replace('#', ''))
+                              )
         
-               if '%' in file:
-                   os.rename(os.path.join(Input_Folder, file), os.path.join(Input_Folder, file.replace('%', '') ) )    
-               
-                
+                if '%' in file:
+                    os.rename(os.path.join(input_folder, file),
+                              os.path.join(input_folder, file.replace('%', ''))
+                              )
+
         results = {}       
         outputs = {}
 
